@@ -4,38 +4,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Go chat 🚀</title>
+    <title>Go Chat 🚀</title>
 </head>
 
 <body>
-    <div style="display: flex;flex-direction: column;">
+    <div style="display: flex; flex-direction: column;">
         <div id="inputs">
             <form onsubmit="handleSubmit(event)" method="post">
-                <input id="username" type="text" name="username" placeholder="username" required>
-                <input id="message" type="text" name="message" placeholder="what's on your mind ?" required>
+                <input id="id" type="text" name="id" placeholder="Enter message ID" required>
+                <input id="username" type="text" name="username" placeholder="Enter your username" required>
+                <input id="receiver" type="text" name="receiver" placeholder="Enter receiver's name" required>
+                <input id="message" type="text" name="message" placeholder="What's on your mind?" required>
                 <input type="submit" value="Send">
             </form>
         </div>
-        <div id="messages" style="display: flex;flex-direction: column;"></div>
+        <div id="messages" style="display: flex; flex-direction: column;"></div>
     </div>
 </body>
 
 <script>
+    const websocket = new WebSocket("ws://localhost:8080/ws"); // Correct WebSocket URL
 
-    const websocket = new WebSocket("localhost:80/ws");
-
+    // Handle form submission
     function handleSubmit(e) {
         e.preventDefault();
-        websocket.send(JSON.stringify({
-            "from": e.target.username.value,
-            "message": e.target.message.value
-        }))
+
+        const messageObj = {
+            id: e.target.id.value, // Manually provided message ID
+            text: e.target.message.value, // The message content
+            sender: e.target.username.value, // Sender's username
+            receiver: e.target.receiver.value, // Receiver's username
+            type: "chat", // Message type
+            timestamp: new Date().toISOString() // Timestamp for the message
+        };
+
+        // Send message to WebSocket server
+        websocket.send(JSON.stringify(messageObj));
+
+        // Clear the input fields after submission (except ID if needed again)
+        e.target.message.value = "";
     }
 
+    // Handle receiving a message from the WebSocket
     websocket.onmessage = function (event) {
-        const message = JSON.parse(event.data)
-        messages.innerHTML += `<p><b>${message.from}</b> says ${message.message}</p>`
+        const message = JSON.parse(event.data);
+        const timestamp = new Date(message.timestamp).toLocaleTimeString(); // Format the timestamp
+
+        // Display the message in the messages div
+        document.getElementById("messages").innerHTML += `<p><b>${message.sender}</b> to <b>${message.receiver}</b> at ${timestamp}: ${message.text}</p>`;
     }
+
+    // Handle WebSocket connection errors
+    websocket.onerror = function (error) {
+        console.error("WebSocket Error: ", error);
+    };
+
+    // Handle WebSocket connection close
+    websocket.onclose = function (event) {
+        console.log("WebSocket connection closed: ", event);
+    };
 </script>
 
 </html>
